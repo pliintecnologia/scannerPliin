@@ -20,6 +20,16 @@ npm install
 npm run dev
 ```
 
+## Deploy na Vercel
+```bash
+npm install -g vercel
+vercel
+```
+Ou use o script:
+```bash
+npm run deploy
+```
+
 ## Escopo atual
 - Sem login
 - Sem banco de dados
