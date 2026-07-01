@@ -3,6 +3,7 @@ import type { AnalysisResult } from "../../../../lib/types";
 import { buildFallbackPdfBuffer, buildPdfBuffer } from "../../../../lib/audit/report";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as AnalysisResult | null;

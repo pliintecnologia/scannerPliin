@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { runAudit } from "../../../lib/audit/runner";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 const MAX_HTML_LENGTH = 2_000_000;
 
 function normalizeUrl(value: string) {

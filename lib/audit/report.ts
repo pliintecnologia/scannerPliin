@@ -1,10 +1,9 @@
 import type { AnalysisResult } from "../types";
+import { launchBrowser } from "./browser";
 import { toReportHtml } from "../export";
 
 export async function buildPdfBuffer(result: AnalysisResult) {
-  const { chromium } = await import("playwright");
-
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 1800 } });
     await page.setContent(toReportHtml(result), { waitUntil: "networkidle" });

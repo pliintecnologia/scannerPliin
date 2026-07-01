@@ -2,6 +2,7 @@ import { analyzeHtml } from "../analyzer";
 import type { AnalysisResult } from "../types";
 import type { AuditInput, AuditResult, PageAudit } from "./types";
 import { getSameOriginLinks } from "./crawl";
+import { getChromiumLaunchOptions, launchBrowser } from "./browser";
 import { renderPage } from "./render";
 
 async function runAxe(page: import("playwright").Page) {
@@ -20,8 +21,9 @@ async function runAxe(page: import("playwright").Page) {
 async function runPa11y(url: string) {
   try {
     const pa11y = (await import("pa11y")).default;
+    const chromiumOptions = await getChromiumLaunchOptions();
     return await pa11y(url, {
-      chromeLaunchConfig: { args: ["--no-sandbox"] },
+      chromeLaunchConfig: chromiumOptions,
       standard: "WCAG2AA",
       includeWarnings: true
     });
@@ -33,9 +35,7 @@ async function runPa11y(url: string) {
 async function runLighthouse(url: string) {
   try {
     const lighthouse = (await import("lighthouse")).default;
-    const { chromium } = await import("playwright");
-    const browser = await chromium.launch({
-      headless: true,
+    const browser = await launchBrowser({
       args: ["--remote-debugging-port=9222"]
     });
     try {
@@ -86,8 +86,7 @@ export async function runAudit(input: AuditInput): Promise<AuditResult> {
   if (input.html) {
     let analysis: AnalysisResult = analyzeHtml(input.html, input.url);
     if (input.useAxe || (input.usePa11y && input.url) || (input.useLighthouse && input.url)) {
-      const { chromium } = await import("playwright");
-      const browser = await chromium.launch({ headless: true });
+      const browser = await launchBrowser();
       try {
         const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
         await page.setContent(input.html, { waitUntil: "networkidle" });
@@ -118,8 +117,7 @@ export async function runAudit(input: AuditInput): Promise<AuditResult> {
     return { pages: [{ renderedHtml: "", analysis }], summary: analysis };
   }
 
-  const { chromium } = await import("playwright");
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     const rendered = await renderPage(page, input.url);

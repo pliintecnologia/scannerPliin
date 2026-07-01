@@ -13,11 +13,13 @@
     "deploy:preview": "vercel"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^138.0.2",
     "axe-core": "^4.10.2",
     "lighthouse": "^12.8.2",
     "pa11y": "^9.0.0",
     "pdfkit": "^0.17.1",
     "playwright": "^1.55.0",
+    "playwright-core": "^1.55.0",
     "next": "^15.4.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

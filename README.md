@@ -30,6 +30,12 @@ Ou use o script:
 npm run deploy
 ```
 
+## Playwright na Vercel
+- Em producao o projeto usa `playwright-core` com `@sparticuz/chromium`, compativel com funcoes serverless da Vercel.
+- O `vercel.json` define `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` para evitar download desnecessario do browser no build.
+- Localmente o projeto continua usando `playwright`, entao `npm install` baixa o Chromium para desenvolvimento.
+- Depois de atualizar as dependencias, rode `npm install` antes do proximo deploy.
+
 ## Escopo atual
 - Sem login
 - Sem banco de dados
