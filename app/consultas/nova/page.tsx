@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import Link from "next/link";
 import type { AuditResult } from "../../../lib/audit/types";
 import type { AnalysisResult } from "../../../lib/types";
 import { toCsv, toReportHtml } from "../../../lib/export";
@@ -221,9 +222,9 @@ export default function Home() {
   return (
     <main className="shell">
       <header className="appHeader">
-        <a className="brand" href="/consultas">Scanner Pliin</a>
+        <Link className="brand" href="/consultas">Scanner Pliin</Link>
         <nav aria-label="Navegação principal">
-          <a href="/consultas">Minhas consultas</a>
+          <Link href="/consultas">Minhas consultas</Link>
           <form action="/api/auth/logout" method="post"><button type="submit" className="ghostButton">Sair</button></form>
         </nav>
       </header>
