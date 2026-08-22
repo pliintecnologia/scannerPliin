@@ -139,8 +139,15 @@ jobs:
           set -Eeuo pipefail
           cd "$1"
           export APP_IMAGE="$2"
+          show_failure_logs() {
+            echo "Deploy falhou; exibindo estado e logs dos servicos:"
+            docker compose ps --all || true
+            docker compose logs --no-color --tail=200 db migrate app || true
+          }
+          trap show_failure_logs ERR
           test -f .env || { echo "Arquivo $1/.env ausente na VPS"; exit 1; }
           docker compose pull app migrate
           docker compose up -d --no-build --remove-orphans --wait --wait-timeout 180
+          trap - ERR
           docker compose ps
           REMOTE

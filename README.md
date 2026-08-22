@@ -36,7 +36,7 @@ Aplicação comercial multiusuário para auditorias de acessibilidade WCAG, com 
    docker compose up -d --build
    ```
 
-4. Acesse `http://localhost:3000`. O schema é aplicado automaticamente antes do servidor iniciar.
+4. Acesse `http://localhost:3001`. O schema é aplicado automaticamente antes do servidor iniciar.
 
 Para acompanhar a inicialização:
 
@@ -65,7 +65,7 @@ AUTH_SECRET=uma-chave-aleatoria-com-no-minimo-32-caracteres
 
 ## Produção pública
 
-- Coloque um proxy reverso (Caddy, Traefik, Nginx ou load balancer) com HTTPS na frente da porta 3000.
+- Coloque um proxy reverso (Caddy, Traefik, Nginx ou load balancer) com HTTPS na frente da porta 3001.
 - Os cookies são `Secure` em produção; publique sempre por HTTPS.
 - Não exponha a porta 5432; o Compose publica somente a aplicação.
 - Mantenha separadas as credenciais administrativa e `scanner_app`; nunca forneça `POSTGRES_PASSWORD` ao container da aplicação.
