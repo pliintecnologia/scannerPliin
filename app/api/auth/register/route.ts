@@ -32,8 +32,8 @@ export async function POST(request: Request) {
   }
   if (!validCpf(cpf)) return NextResponse.json({ error: "CPF inválido." }, { status: 400 });
   if (cnpj && !validCnpj(cnpj)) return NextResponse.json({ error: "CNPJ inválido." }, { status: 400 });
-  if (password.length < 10 || password.length > 128 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-    return NextResponse.json({ error: "A senha deve ter de 10 a 128 caracteres, com letras e números." }, { status: 400 });
+  if (password.length < 6 || password.length > 128 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return NextResponse.json({ error: "A senha deve ter de 6 a 128 caracteres, com letras e números." }, { status: 400 });
   }
 
   try {

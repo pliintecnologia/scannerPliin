@@ -79,14 +79,21 @@ export async function POST(request: Request) {
       usePa11y: body.usePa11y,
       useLighthouse: body.useLighthouse
     });
-    const persistedSummary = {
-      ...result.summary,
-      issues: result.summary.issues.map(({ html: _html, correctedCode: _correctedCode, ...issue }) => issue)
+    const persistedResult = {
+      summary: result.summary,
+      pages: result.pages.map((page) => ({
+        url: page.url,
+        renderedHtml: "",
+        analysis: page.analysis,
+        axe: Boolean(page.axe),
+        pa11y: Boolean(page.pa11y),
+        lighthouse: Boolean(page.lighthouse)
+      }))
     };
     await tenantQuery(user.tenantId,
       `INSERT INTO audits (tenant_id, user_id, url, score, classification, issue_count, status, result)
        VALUES ($1, $2, $3, $4, $5, $6, 'completed', $7)`,
-      [user.tenantId, user.id, auditLabel(url), result.summary.score, result.summary.classification, result.summary.issues.length, persistedSummary]
+      [user.tenantId, user.id, auditLabel(url), result.summary.score, result.summary.classification, result.summary.issues.length, persistedResult]
     );
     return NextResponse.json(result);
   } catch (error) {

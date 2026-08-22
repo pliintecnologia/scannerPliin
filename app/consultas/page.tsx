@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "../../lib/auth";
 import { tenantQuery } from "../../lib/db";
+import { BrandLogo } from "../brand-logo";
 
 type AuditRow = { id: string; url: string; score: number | null; classification: string | null; issue_count: number; status: string; created_at: Date };
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export default async function ConsultasPage() {
   if (!user) redirect("/login");
   const audits = await tenantQuery<AuditRow>(user.tenantId, `SELECT id, url, score, classification, issue_count, status, created_at FROM audits WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 100`, [user.tenantId]);
   return <main className="dashboardShell">
-    <header className="appHeader"><Link className="brand" href="/consultas">Scanner Pliin</Link><nav aria-label="Navegação principal"><span>Olá, {user.name.split(" ")[0]}</span><form action="/api/auth/logout" method="post"><button type="submit" className="ghostButton">Sair</button></form></nav></header>
+    <header className="appHeader"><BrandLogo /><nav aria-label="Navegação principal"><span>Olá, {user.name.split(" ")[0]}</span><form action="/api/auth/logout" method="post"><button type="submit" className="ghostButton">Sair</button></form></nav></header>
     <section className="dashboardHero"><div><p className="eyebrow">Área de consultas</p><h1>Seus diagnósticos</h1><p>Acompanhe as análises realizadas pela sua conta.</p></div><Link className="primaryLink" href="/consultas/nova">Nova consulta</Link></section>
     <section className="listPanel">
       {audits.rows.length ? <div className="auditList">{audits.rows.map((audit) => <article className="auditRow" key={audit.id}>

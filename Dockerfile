@@ -18,6 +18,7 @@ RUN groupadd --system --gid 10001 appuser && useradd --system --uid 10001 --gid 
 COPY --from=build --chown=appuser:appuser /app/package.json /app/yarn.lock ./
 COPY --from=build --chown=appuser:appuser /app/node_modules ./node_modules
 COPY --from=build --chown=appuser:appuser /app/.next ./.next
+COPY --from=build --chown=appuser:appuser /app/public ./public
 COPY --from=build --chown=appuser:appuser /app/db ./db
 COPY --from=build --chown=appuser:appuser /app/scripts ./scripts
 USER appuser
