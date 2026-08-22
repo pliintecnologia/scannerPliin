@@ -111,18 +111,20 @@ Cadastre em **Environment variables**:
 - `VPS_PORT`: porta SSH, normalmente `22` (opcional);
 - `VPS_DEPLOY_PATH`: diretório absoluto, por exemplo `/opt/scanner-pliin`;
 - `VPS_KNOWN_HOSTS`: linha da chave pública do host, obtida de uma fonte
-  confiável (por exemplo, no console da VPS com `ssh-keyscan -H seu-host`).
+  confiável (por exemplo, no console da VPS com `ssh-keyscan -H seu-host`). Salve
+  a saída completa, no formato `host tipo-da-chave chave`, e não somente o
+  fingerprint exibido por `ssh-keygen -l`.
 
 Cadastre separadamente em **Environment secrets**:
 
-- `VPS_SSH_KEY`: chave privada dedicada ao deploy. Nunca salve essa chave em
+- `VPS_PASSWORD`: senha SSH do usuário de deploy. Nunca salve essa senha em
   Environment variables, arquivos versionados ou logs.
 
 Antes do primeiro deploy, instale Docker Engine com o plugin Compose na VPS,
-adicione a chave pública correspondente ao `authorized_keys` do usuário e crie
+habilite autenticação SSH por senha para o usuário de deploy e crie
 `VPS_DEPLOY_PATH/.env` com os valores de `.env.example`. Esse `.env` permanece
 somente na VPS e não é enviado nem sobrescrito pelo workflow. O usuário SSH
-precisa executar `docker` sem prompt de senha.
+precisa executar `docker` sem um segundo prompt de senha.
 
 Se o pacote GHCR for privado, mantenha a permissão `packages: write` do
 workflow; o token efêmero do próprio job autentica a VPS a cada deploy.

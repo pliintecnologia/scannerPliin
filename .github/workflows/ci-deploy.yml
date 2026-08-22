@@ -83,27 +83,37 @@ jobs:
           VPS_USER: ${{ vars.VPS_USER }}
           VPS_PORT: ${{ vars.VPS_PORT }}
           VPS_DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
           VPS_KNOWN_HOSTS: ${{ vars.VPS_KNOWN_HOSTS }}
         run: |
-          for value in VPS_HOST VPS_USER VPS_DEPLOY_PATH VPS_SSH_KEY VPS_KNOWN_HOSTS; do
+          for value in VPS_HOST VPS_USER VPS_DEPLOY_PATH VPS_PASSWORD VPS_KNOWN_HOSTS; do
             test -n "${!value}" || { echo "Secret obrigatorio ausente: $value"; exit 1; }
           done
           [[ "$VPS_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "VPS_HOST invalido"; exit 1; }
           [[ "$VPS_USER" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]] || { echo "VPS_USER invalido"; exit 1; }
           [[ "${VPS_PORT:-22}" =~ ^[0-9]+$ ]] || { echo "VPS_PORT invalida"; exit 1; }
           [[ "$VPS_DEPLOY_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]] || { echo "VPS_DEPLOY_PATH deve ser um caminho absoluto simples"; exit 1; }
-      - name: Configurar chave e host SSH
+      - name: Configurar cliente e host SSH
         shell: bash
         env:
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
           VPS_KNOWN_HOSTS: ${{ vars.VPS_KNOWN_HOSTS }}
         run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends sshpass
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
           printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
+          known_host="$VPS_HOST"
+          if [[ "${VPS_PORT:-22}" != "22" ]]; then
+            known_host="[$VPS_HOST]:$VPS_PORT"
+          fi
+          ssh-keygen -F "$known_host" -f ~/.ssh/known_hosts >/dev/null || {
+            echo "VPS_KNOWN_HOSTS nao contem uma entrada para $known_host"
+            echo "Salve a linha completa gerada por ssh-keyscan, nao apenas o fingerprint."
+            exit 1
+          }
       - name: Enviar Compose e executar deploy
         shell: bash
         env:
@@ -115,16 +125,17 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
         run: |
           port="${VPS_PORT:-22}"
           target="${VPS_USER}@${VPS_HOST}"
-          ssh_args=(-i ~/.ssh/deploy_key -p "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes)
-          ssh "${ssh_args[@]}" "$target" mkdir -p "$VPS_DEPLOY_PATH"
-          scp -i ~/.ssh/deploy_key -P "$port" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+          ssh_args=(-p "$port" -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=yes)
+          sshpass -e ssh "${ssh_args[@]}" "$target" mkdir -p "$VPS_DEPLOY_PATH"
+          sshpass -e scp -P "$port" -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=yes \
             docker-compose.yml "$target:$VPS_DEPLOY_PATH/docker-compose.yml"
-          printf '%s' "$GHCR_TOKEN" | ssh "${ssh_args[@]}" "$target" \
+          printf '%s' "$GHCR_TOKEN" | sshpass -e ssh "${ssh_args[@]}" "$target" \
             docker login ghcr.io -u "$GHCR_USER" --password-stdin
-          ssh "${ssh_args[@]}" "$target" bash -s -- "$VPS_DEPLOY_PATH" "$IMAGE_NAME:$IMAGE_TAG" <<'REMOTE'
+          sshpass -e ssh "${ssh_args[@]}" "$target" bash -s -- "$VPS_DEPLOY_PATH" "$IMAGE_NAME:$IMAGE_TAG" <<'REMOTE'
           set -Eeuo pipefail
           cd "$1"
           export APP_IMAGE="$2"
