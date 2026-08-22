@@ -1,6 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ["playwright", "playwright-core", "@sparticuz/chromium", "axe-core", "pa11y", "lighthouse", "pdfkit"]
+  serverExternalPackages: ["playwright", "playwright-core", "@sparticuz/chromium", "axe-core", "pa11y", "lighthouse", "pdfkit", "pg"],
+  poweredByHeader: false,
+  async headers() {
+    return [{
+      source: "/(.*)",
+      headers: [
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "X-Frame-Options", value: "DENY" },
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        { key: "Cross-Origin-Opener-Policy", value: "same-origin" }
+      ]
+    }];
+  }
 };
 
 export default nextConfig;

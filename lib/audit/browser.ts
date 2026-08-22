@@ -22,7 +22,7 @@ type SparticuzChromiumModule = {
 
 export async function getChromiumLaunchOptions(overrides: LaunchOverrides = {}): Promise<BrowserLaunchOptions> {
   const extraArgs = overrides.args ?? [];
-  const isServerless = process.env.VERCEL === "1" || process.env.AWS_REGION || process.env.NODE_ENV === "production";
+  const isServerless = process.env.VERCEL === "1" || Boolean(process.env.AWS_REGION);
 
   if (!isServerless) {
     return {
@@ -42,7 +42,7 @@ export async function getChromiumLaunchOptions(overrides: LaunchOverrides = {}):
 export async function launchBrowser(overrides: LaunchOverrides = {}): Promise<any> {
   const options = await getChromiumLaunchOptions(overrides);
   const chromiumModule = (
-    process.env.VERCEL === "1" || process.env.AWS_REGION || process.env.NODE_ENV === "production"
+    process.env.VERCEL === "1" || process.env.AWS_REGION
       ? await import("playwright-core")
       : await import("playwright")
   ) as ChromiumModule;

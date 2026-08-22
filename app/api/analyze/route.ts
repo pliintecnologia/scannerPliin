@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { runAudit } from "../../../lib/audit/runner";
+import { getCurrentUser } from "../../../lib/auth";
+import { tenantQuery } from "../../../lib/db";
+import { assertPublicUrl } from "../../../lib/public-url";
+import { bodyTooLarge, rejectCrossOrigin } from "../../../lib/request-security";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,7 +27,19 @@ function isPrivateTarget(hostname: string) {
   );
 }
 
+function auditLabel(url: string) {
+  if (!url) return "Arquivo HTML";
+  const parsed = new URL(url);
+  parsed.search = "";
+  parsed.hash = "";
+  return parsed.toString().slice(0, 2048);
+}
+
 export async function POST(request: Request) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 });
+  if (bodyTooLarge(request, MAX_HTML_LENGTH + 65_536)) return NextResponse.json({ error: "Requisição muito grande." }, { status: 413 });
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Sessão expirada. Entre novamente." }, { status: 401 });
   const body = await request.json().catch(() => null) as {
     html?: string;
     url?: string;
@@ -42,11 +58,10 @@ export async function POST(request: Request) {
   if (url) {
     try {
       const parsed = new URL(url);
-      if (!["http:", "https:"].includes(parsed.protocol) || isPrivateTarget(parsed.hostname)) {
-        return NextResponse.json({ error: "URL invalida." }, { status: 400 });
-      }
+      if (isPrivateTarget(parsed.hostname)) return NextResponse.json({ error: "URL inválida." }, { status: 400 });
+      await assertPublicUrl(url);
     } catch {
-      return NextResponse.json({ error: "URL invalida." }, { status: 400 });
+      return NextResponse.json({ error: "URL inválida ou destino não permitido." }, { status: 400 });
     }
   }
 
@@ -64,9 +79,22 @@ export async function POST(request: Request) {
       usePa11y: body.usePa11y,
       useLighthouse: body.useLighthouse
     });
+    const persistedSummary = {
+      ...result.summary,
+      issues: result.summary.issues.map(({ html: _html, correctedCode: _correctedCode, ...issue }) => issue)
+    };
+    await tenantQuery(user.tenantId,
+      `INSERT INTO audits (tenant_id, user_id, url, score, classification, issue_count, status, result)
+       VALUES ($1, $2, $3, $4, $5, $6, 'completed', $7)`,
+      [user.tenantId, user.id, auditLabel(url), result.summary.score, result.summary.classification, result.summary.issues.length, persistedSummary]
+    );
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha inesperada na auditoria.";
+    await tenantQuery(user.tenantId,
+      `INSERT INTO audits (tenant_id, user_id, url, status, error_message) VALUES ($1, $2, $3, 'failed', $4)`,
+      [user.tenantId, user.id, auditLabel(url), message.slice(0, 1000)]
+    ).catch((dbError) => console.error("audit_failure_log_failed", dbError));
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

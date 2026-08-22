@@ -4,8 +4,8 @@ out
 dist
 .vercel
 .env*
+!.env.example
 coverage
 *.log
 package-lock.json
-yarn.lock
 pnpm-lock.yaml
