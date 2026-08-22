@@ -103,16 +103,20 @@ publica uma imagem no GitHub Container Registry (GHCR) e faz deploy por SSH na
 VPS quando houver push na branch `main`. Pull requests executam apenas as
 validações e o build.
 
-Crie um Environment chamado `production` em **Settings > Environments** e
-adicione estes secrets nele (ou em **Settings > Secrets and variables > Actions**):
+Crie um Environment chamado `production` em **Settings > Environments**.
+Cadastre em **Environment variables**:
 
 - `VPS_HOST`: hostname ou IP da VPS;
 - `VPS_USER`: usuário SSH com acesso ao Docker;
 - `VPS_PORT`: porta SSH, normalmente `22` (opcional);
 - `VPS_DEPLOY_PATH`: diretório absoluto, por exemplo `/opt/scanner-pliin`;
-- `VPS_SSH_KEY`: chave privada dedicada ao deploy;
 - `VPS_KNOWN_HOSTS`: linha da chave pública do host, obtida de uma fonte
   confiável (por exemplo, no console da VPS com `ssh-keyscan -H seu-host`).
+
+Cadastre separadamente em **Environment secrets**:
+
+- `VPS_SSH_KEY`: chave privada dedicada ao deploy. Nunca salve essa chave em
+  Environment variables, arquivos versionados ou logs.
 
 Antes do primeiro deploy, instale Docker Engine com o plugin Compose na VPS,
 adicione a chave pública correspondente ao `authorized_keys` do usuário e crie
