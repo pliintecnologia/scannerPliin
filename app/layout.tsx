@@ -6,7 +6,8 @@ import "@fontsource/sora/700.css";
 import type { ReactNode } from "react";
 import { ThemeInitializer } from "./theme-toggle";
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL
+const siteUrl = process.env.APP_URL
+  || process.env.NEXT_PUBLIC_APP_URL
   || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
 export const metadata = {
