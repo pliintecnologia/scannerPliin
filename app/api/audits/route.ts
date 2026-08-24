@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../lib/auth";
 import { tenantQuery } from "../../../lib/db";
+import { getEffectiveAccess } from "../../../lib/billing";
 
 type AuditRow = {
   id: string;
@@ -18,6 +19,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sessão expirada." }, { status: 401 });
+  if (!(await getEffectiveAccess(user.tenantId)).allowed) return NextResponse.json({ error: "Assinatura necessária." }, { status: 402 });
 
   const result = await tenantQuery<AuditRow>(
     user.tenantId,

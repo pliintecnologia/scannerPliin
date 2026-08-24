@@ -3,6 +3,7 @@ import { getCurrentUser } from "../../../../lib/auth";
 import type { AnalysisResult } from "../../../../lib/types";
 import { buildFallbackPdfBuffer, buildPdfBuffer } from "../../../../lib/audit/report";
 import { bodyTooLarge, rejectCrossOrigin } from "../../../../lib/request-security";
+import { getEffectiveAccess } from "../../../../lib/billing";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -10,7 +11,9 @@ export const maxDuration = 60;
 export async function POST(request: Request) {
   if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Origem não permitida." }, { status: 403 });
   if (bodyTooLarge(request, 2_000_000)) return NextResponse.json({ error: "Requisição muito grande." }, { status: 413 });
-  if (!(await getCurrentUser())) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  if (!(await getEffectiveAccess(user.tenantId)).allowed) return NextResponse.json({ error: "Assinatura necessária." }, { status: 402 });
   const body = (await request.json().catch(() => null)) as AnalysisResult | null;
   if (!body) {
     return NextResponse.json({ error: "Payload invalido." }, { status: 400 });

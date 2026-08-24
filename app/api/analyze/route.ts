@@ -4,6 +4,7 @@ import { getCurrentUser } from "../../../lib/auth";
 import { tenantQuery } from "../../../lib/db";
 import { assertPublicUrl } from "../../../lib/public-url";
 import { bodyTooLarge, rejectCrossOrigin } from "../../../lib/request-security";
+import { getEffectiveAccess } from "../../../lib/billing";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
   if (bodyTooLarge(request, MAX_HTML_LENGTH + 65_536)) return NextResponse.json({ error: "Requisição muito grande." }, { status: 413 });
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sessão expirada. Entre novamente." }, { status: 401 });
+  if (!(await getEffectiveAccess(user.tenantId)).allowed) return NextResponse.json({ error: "Assinatura necessária." }, { status: 402 });
   const body = await request.json().catch(() => null) as {
     html?: string;
     url?: string;

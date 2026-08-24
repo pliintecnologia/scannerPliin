@@ -32,6 +32,8 @@ jobs:
         run: yarn audit:types
       - name: Verificar SQL
         run: yarn security:check
+      - name: Executar testes
+        run: yarn test
       - name: Gerar build Next.js
         run: yarn build
 

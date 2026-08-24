@@ -5,7 +5,7 @@ declare global {
 }
 
 function createPool() {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = getConnectionString();
   return new Pool({
     connectionString,
     max: Number(process.env.DATABASE_POOL_SIZE || 10),
@@ -18,15 +18,35 @@ function createPool() {
   });
 }
 
-export const db = globalThis.__scannerPliinPool ?? createPool();
-if (process.env.NODE_ENV !== "production") globalThis.__scannerPliinPool = db;
+function getConnectionString() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+
+  const password = process.env.APP_DATABASE_PASSWORD;
+  if (!password) {
+    throw new Error(
+      "Banco de dados não configurado: defina DATABASE_URL ou APP_DATABASE_PASSWORD."
+    );
+  }
+
+  const host = process.env.POSTGRES_HOST || "localhost";
+  const port = process.env.POSTGRES_PORT || "5432";
+  const database = process.env.POSTGRES_DB || "scanner_pliin";
+  return `postgresql://scanner_app:${encodeURIComponent(password)}@${host}:${port}/${encodeURIComponent(database)}`;
+}
+
+function getPool() {
+  if (!globalThis.__scannerPliinPool) {
+    globalThis.__scannerPliinPool = createPool();
+  }
+  return globalThis.__scannerPliinPool;
+}
 
 export async function query<T extends QueryResultRow>(text: string, values: unknown[] = []) {
-  return db.query<T>(text, values);
+  return getPool().query<T>(text, values);
 }
 
 export async function transaction<T>(work: (client: PoolClient) => Promise<T>) {
-  const client = await db.connect();
+  const client = await getPool().connect();
   try {
     await client.query("BEGIN");
     const result = await work(client);

@@ -25,6 +25,19 @@ CREATE TABLE IF NOT EXISTS tenants (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Na primeira execucao desta versao, somente tenants que ja existiam recebem
+-- acesso legado. Novos tenants usam o DEFAULT FALSE.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'legacy_access'
+  ) THEN
+    ALTER TABLE tenants ADD COLUMN legacy_access BOOLEAN NOT NULL DEFAULT FALSE;
+    UPDATE tenants SET legacy_access = TRUE;
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS memberships (
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -117,12 +130,84 @@ CREATE TABLE IF NOT EXISTS auth_attempts (
 );
 CREATE INDEX IF NOT EXISTS auth_attempts_key_created_idx ON auth_attempts(attempt_key, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS asaas_customers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  asaas_customer_id VARCHAR(80) NOT NULL UNIQUE,
+  document_hash CHAR(64) NOT NULL,
+  document_last4 CHAR(4) NOT NULL,
+  name VARCHAR(160) NOT NULL,
+  email VARCHAR(254) NOT NULL,
+  phone VARCHAR(20),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (tenant_id, document_hash)
+);
+CREATE INDEX IF NOT EXISTS asaas_customers_tenant_idx ON asaas_customers(tenant_id);
+
+CREATE TABLE IF NOT EXISTS asaas_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  customer_id UUID REFERENCES asaas_customers(id) ON DELETE RESTRICT,
+  asaas_customer_id VARCHAR(80),
+  asaas_subscription_id VARCHAR(80) UNIQUE,
+  idempotency_key VARCHAR(128) NOT NULL UNIQUE,
+  plan VARCHAR(20) NOT NULL DEFAULT 'premium' CHECK (plan = 'premium'),
+  billing_type VARCHAR(20) NOT NULL CHECK (billing_type IN ('CREDIT_CARD', 'PIX', 'BOLETO')),
+  cycle VARCHAR(20) NOT NULL DEFAULT 'MONTHLY' CHECK (cycle = 'MONTHLY'),
+  value_cents INTEGER NOT NULL DEFAULT 5000 CHECK (value_cents = 5000),
+  next_due_date DATE NOT NULL,
+  description VARCHAR(300) NOT NULL,
+  status VARCHAR(30) NOT NULL DEFAULT 'CREATING',
+  paid_access_until TIMESTAMPTZ,
+  remote_response JSONB,
+  error_message VARCHAR(500),
+  created_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS asaas_subscriptions_tenant_idx ON asaas_subscriptions(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS asaas_subscriptions_remote_idx ON asaas_subscriptions(asaas_subscription_id);
+
+CREATE TABLE IF NOT EXISTS asaas_webhook_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id VARCHAR(120) NOT NULL UNIQUE,
+  event_type VARCHAR(80) NOT NULL,
+  resource_id VARCHAR(80),
+  payload JSONB NOT NULL DEFAULT '{}'::JSONB,
+  processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS benefit_coupons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code VARCHAR(64) NOT NULL UNIQUE CHECK (code = UPPER(BTRIM(code))),
+  name VARCHAR(160),
+  starts_at TIMESTAMPTZ,
+  ends_at TIMESTAMPTZ NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (starts_at IS NULL OR starts_at < ends_at)
+);
+
+CREATE TABLE IF NOT EXISTS benefit_coupon_redemptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  coupon_id UUID NOT NULL REFERENCES benefit_coupons(id) ON DELETE RESTRICT,
+  redeemed_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  redeemed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (tenant_id, coupon_id)
+);
+CREATE INDEX IF NOT EXISTS coupon_redemptions_tenant_idx ON benefit_coupon_redemptions(tenant_id);
+
 REVOKE ALL ON audits FROM PUBLIC;
 REVOKE ALL ON users FROM PUBLIC;
 REVOKE ALL ON sessions FROM PUBLIC;
 REVOKE ALL ON memberships FROM PUBLIC;
 REVOKE ALL ON tenants FROM PUBLIC;
+REVOKE ALL ON asaas_customers, asaas_subscriptions, asaas_webhook_events, benefit_coupons, benefit_coupon_redemptions FROM PUBLIC;
 
 GRANT USAGE ON SCHEMA public TO scanner_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON users, sessions, tenants, memberships, audits, auth_attempts TO scanner_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON asaas_customers, asaas_subscriptions, asaas_webhook_events, benefit_coupons, benefit_coupon_redemptions TO scanner_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO scanner_app;

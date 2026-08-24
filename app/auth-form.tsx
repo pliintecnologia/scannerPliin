@@ -23,7 +23,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       });
       const data = await response.json().catch(() => null) as { error?: string } | null;
       if (!response.ok) throw new Error(data?.error || "Não foi possível continuar.");
-      router.push("/consultas");
+      router.push(register ? "/assinatura" : "/app");
       router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Falha inesperada.");

@@ -265,7 +265,7 @@ export default function AuditWorkspace({ initialAudit = null }: { initialAudit?:
   return (
     <main className="shell auditDashboard">
       <header className="appHeader">
-        <Link className="backLink" href="/consultas"><ArrowLeft size={17} aria-hidden="true" /> Voltar à lista</Link>
+        <Link className="backLink" href="/app"><ArrowLeft size={17} aria-hidden="true" /> Voltar à lista</Link>
         <div className="brandCentered"><BrandLogo compact /></div>
         <nav aria-label="Navegação principal">
           <ThemeToggle />
@@ -335,7 +335,7 @@ export default function AuditWorkspace({ initialAudit = null }: { initialAudit?:
             <h2 id="saved-audits-title">Análises recentes</h2>
             <p>Retome rapidamente os diagnósticos que já estão salvos no banco de dados.</p>
           </div>
-          <Link className="textLink" href="/consultas">Ver todas</Link>
+          <Link className="textLink" href="/app">Ver todas</Link>
         </div>
         {savedAudits.length ? (
           <div className="savedAuditList">
@@ -352,7 +352,7 @@ export default function AuditWorkspace({ initialAudit = null }: { initialAudit?:
                   <span>{item.issueCount} problemas</span>
                   <strong>{item.score == null ? "—" : `${item.score}/100`}</strong>
                 </div>
-                <Link className="auditAction" href={`/consultas/${item.id}`} aria-label={`Rever análise de ${item.url || "Arquivo HTML"}`}>
+                <Link className="auditAction" href={`/app/consultas/${item.id}`} aria-label={`Rever análise de ${item.url || "Arquivo HTML"}`}>
                   Rever análise
                 </Link>
               </article>

@@ -29,6 +29,11 @@ services:
       DATABASE_URL: postgresql://scanner_app:${APP_DATABASE_PASSWORD}@db:5432/${POSTGRES_DB:-scanner_pliin}
       AUTH_SECRET: ${AUTH_SECRET:?Defina AUTH_SECRET no arquivo .env}
       DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
+      ASAAS_ENVIRONMENT: ${ASAAS_ENVIRONMENT:-sandbox}
+      ASAAS_API_KEY: ${ASAAS_API_KEY:-}
+      ASAAS_WEBHOOK_TOKEN: ${ASAAS_WEBHOOK_TOKEN:-}
+      ASAAS_BASE_URL: ${ASAAS_BASE_URL:-}
+      BILLING_COMPANY_NAME: ${BILLING_COMPANY_NAME:-Scanner Pliin}
     depends_on:
       db:
         condition: service_healthy

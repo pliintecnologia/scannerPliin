@@ -10,6 +10,7 @@
     "lint": "next lint",
     "audit:types": "tsc --noEmit",
     "security:check": "node scripts/security-check.mjs",
+    "test": "vitest run",
     "db:migrate": "node scripts/migrate.mjs",
     "start:prod": "next start",
     "deploy": "vercel --prod",
@@ -38,6 +39,7 @@
     "@types/react-dom": "^19.1.5",
     "eslint": "^9.33.0",
     "eslint-config-next": "^15.4.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.11"
   }
 }

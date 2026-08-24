@@ -128,3 +128,29 @@ precisa executar `docker` sem um segundo prompt de senha.
 
 Se o pacote GHCR for privado, mantenha a permissão `packages: write` do
 workflow; o token efêmero do próprio job autentica a VPS a cada deploy.
+
+## Pagamentos Asaas
+
+O plano Premium custa R$ 50,00 por mês e libera todo o tenant. Configure primeiro
+o sandbox com `ASAAS_ENVIRONMENT=sandbox`, `ASAAS_API_KEY`,
+`ASAAS_WEBHOOK_TOKEN` (32 ou mais caracteres) e, opcionalmente,
+`BILLING_COMPANY_NAME`. `ASAAS_BASE_URL` serve apenas como sobrescrita controlada.
+Em arquivos `.env` lidos pelo Docker Compose, duplique cada `$` existente na chave
+Asaas (`$` vira `$$`) para impedir interpolação e corrupção da credencial.
+
+No painel Asaas, cadastre manualmente o webhook público
+`https://seu-dominio/api/webhooks/asaas` e selecione `PAYMENT_CONFIRMED`,
+`PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED`,
+`SUBSCRIPTION_UPDATED`, `SUBSCRIPTION_INACTIVATED` e `SUBSCRIPTION_DELETED`.
+Use o mesmo token de `ASAAS_WEBHOOK_TOKEN`.
+
+Cupons são cadastrados somente pelo usuário administrativo do PostgreSQL:
+
+```sql
+INSERT INTO benefit_coupons (code, name, starts_at, ends_at)
+VALUES ('CORTESIA2026', 'Cortesia de homologação', NOW(), NOW() + INTERVAL '30 days');
+```
+
+Normalize códigos em maiúsculas. Valide cartão, PIX, boleto e reentrega de webhook
+no sandbox antes de usar `ASAAS_ENVIRONMENT=production`. Nunca reutilize a API key
+como token do webhook nem coloque credenciais reais em arquivos versionados.
