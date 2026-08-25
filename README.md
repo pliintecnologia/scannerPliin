@@ -118,7 +118,11 @@ Cadastre em **Environment variables**:
 Cadastre separadamente em **Environment secrets**:
 
 - `VPS_PASSWORD`: senha SSH do usuário de deploy. Nunca salve essa senha em
-  Environment variables, arquivos versionados ou logs.
+  Environment variables, arquivos versionados ou logs;
+- `ASAAS_ENVIRONMENT`: use obrigatoriamente `production` neste Environment;
+- `ASAAS_API_KEY`: chave de produção nova do Asaas, no formato original. O
+  workflow faz o escape necessário para o Docker Compose;
+- `ASAAS_WEBHOOK_TOKEN`: token exclusivo com pelo menos 32 caracteres.
 
 Antes do primeiro deploy, instale Docker Engine com o plugin Compose na VPS,
 habilite autenticação SSH por senha para o usuário de deploy e crie
@@ -137,12 +141,19 @@ o sandbox com `ASAAS_ENVIRONMENT=sandbox`, `ASAAS_API_KEY`,
 `BILLING_COMPANY_NAME`. `ASAAS_BASE_URL` serve apenas como sobrescrita controlada.
 Em arquivos `.env` lidos pelo Docker Compose, duplique cada `$` existente na chave
 Asaas (`$` vira `$$`) para impedir interpolação e corrupção da credencial.
+Ao executar o Next.js diretamente com `npm run dev`, use `\$` no lugar de cada
+`$`. Não reutilize o mesmo formato de escape entre os dois modos de execução.
 
 No painel Asaas, cadastre manualmente o webhook público
 `https://seu-dominio/api/webhooks/asaas` e selecione `PAYMENT_CONFIRMED`,
 `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED`,
 `SUBSCRIPTION_UPDATED`, `SUBSCRIPTION_INACTIVATED` e `SUBSCRIPTION_DELETED`.
 Use o mesmo token de `ASAAS_WEBHOOK_TOKEN`.
+
+Em **Integrações > Chaves de API** no Asaas de produção, autorize o IP público
+fixo de saída da VPS. O IP do container (`172.x.x.x`) é interno e não deve ser
+cadastrado. Um retorno `403` com código `not_allowed_ip` confirma que a chave foi
+aceita, mas o IP público que chegou ao Asaas ainda não está autorizado.
 
 Cupons são cadastrados somente pelo usuário administrativo do PostgreSQL:
 

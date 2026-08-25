@@ -143,8 +143,12 @@ jobs:
               exit 1
             }
           done
-          [[ "$ASAAS_ENVIRONMENT" == "sandbox" || "$ASAAS_ENVIRONMENT" == "production" ]] || {
-            echo "ASAAS_ENVIRONMENT deve ser sandbox ou production"
+          [[ "$ASAAS_ENVIRONMENT" == "production" ]] || {
+            echo "O Environment production exige ASAAS_ENVIRONMENT=production"
+            exit 1
+          }
+          [[ "$ASAAS_API_KEY" == '$aact_prod_'* ]] || {
+            echo "ASAAS_API_KEY deve ser uma chave de producao do Asaas"
             exit 1
           }
           [[ ${#ASAAS_WEBHOOK_TOKEN} -ge 32 ]] || {
@@ -154,8 +158,11 @@ jobs:
           umask 077
           secrets_file="$(mktemp)"
           trap 'rm -f "$secrets_file"' EXIT
+          # O arquivo sera lido pelo Docker Compose; duplique $ para impedir
+          # que a chave Asaas seja interpretada como expansao de variavel.
+          escaped_asaas_api_key="${ASAAS_API_KEY//\$/\$\$}"
           printf 'ASAAS_API_KEY=%s\nASAAS_ENVIRONMENT=%s\nASAAS_WEBHOOK_TOKEN=%s\n' \
-            "$ASAAS_API_KEY" "$ASAAS_ENVIRONMENT" "$ASAAS_WEBHOOK_TOKEN" > "$secrets_file"
+            "$escaped_asaas_api_key" "$ASAAS_ENVIRONMENT" "$ASAAS_WEBHOOK_TOKEN" > "$secrets_file"
           sshpass -e ssh "${ssh_args[@]}" "$target" mkdir -p "$VPS_DEPLOY_PATH"
           sshpass -e scp -P "$port" -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=yes \
             docker-compose.yml "$target:$VPS_DEPLOY_PATH/docker-compose.yml"
