@@ -6,6 +6,7 @@ import type { EffectiveAccess } from "../../lib/billing";
 import type { BillingType } from "../../lib/plans";
 
 type Charge = { id: string; status: string; value: number; dueDate: string; billingType: string; invoiceUrl?: string | null; bankSlipUrl?: string | null };
+type CouponPreview = { code: string; name: string | null; endsAt: string; alreadyRedeemed: boolean };
 
 function accessLabel(access: EffectiveAccess) {
   if (access.source === "paid" && access.status === "overdue_grace") return "Pagamento em atraso — tolerância ativa";
@@ -19,6 +20,7 @@ export function BillingClient({ initialAccess, canManage, user }: { initialAcces
   const [access, setAccess] = useState(initialAccess);
   const [billingType, setBillingType] = useState<BillingType>("PIX");
   const [coupon, setCoupon] = useState("");
+  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,18 +43,32 @@ export function BillingClient({ initialAccess, canManage, user }: { initialAcces
 
   useEffect(() => { void refresh(); }, []);
 
-  async function applyCoupon() {
+  async function validateCoupon(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
     setBusy(true); setError(""); setMessage("");
     try {
       const preview = await fetch("/api/billing/coupons/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: coupon }) });
-      const previewData = await preview.json() as { valid?: boolean; message?: string };
+      const previewData = await preview.json() as { valid?: boolean; message?: string; code?: string; name?: string | null; endsAt?: string; alreadyRedeemed?: boolean };
       if (!preview.ok || !previewData.valid) throw new Error(previewData.message || "Cupom inválido.");
+      setCouponPreview({ code: previewData.code!, name: previewData.name ?? null, endsAt: previewData.endsAt!, alreadyRedeemed: Boolean(previewData.alreadyRedeemed) });
+    } catch (reason) {
+      setCouponPreview(null);
+      setError(reason instanceof Error ? reason.message : "Não foi possível validar o cupom. Tente novamente.");
+    } finally { setBusy(false); }
+  }
+
+  async function applyCoupon() {
+    if (!couponPreview) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
       const response = await fetch("/api/billing/coupons/redeem", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: coupon }) });
       const data = await response.json() as { error?: string; access?: EffectiveAccess };
       if (!response.ok) throw new Error(data.error || "Não foi possível aplicar o cupom.");
       if (data.access) setAccess(data.access);
-      setMessage("Cupom aplicado. Nenhuma cobrança foi criada.");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Falha ao aplicar cupom."); }
+      setCouponPreview(null);
+      setCoupon("");
+      setMessage(`Cupom ativado com sucesso. O Premium está liberado até ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date(couponPreview.endsAt))}. Nenhuma cobrança foi criada.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Não foi possível ativar o cupom. Valide o código novamente."); }
     finally { setBusy(false); }
   }
 
@@ -95,7 +111,26 @@ export function BillingClient({ initialAccess, canManage, user }: { initialAcces
     <section className="billingGrid">
       <article className="billingCard statusCard"><h2>Seu acesso</h2><strong>{accessLabel(access)}</strong>{access.expiresAt ? <p>Válido até {new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date(access.expiresAt))}.</p> : null}{access.allowed ? <Link className="primaryLink" href="/app">Ir para consultas</Link> : null}</article>
       {!canManage ? <article className="billingCard"><h2>Gerenciamento</h2><p>Somente owner ou admin podem contratar, cancelar ou aplicar cupons.</p></article> : <>
-        <article className="billingCard"><h2>Cupom de acesso</h2><p>Um cupom vigente libera o Premium sem criar cobrança.</p><div className="couponRow"><input value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} maxLength={64} placeholder="CÓDIGO"/><button type="button" onClick={applyCoupon} disabled={busy || !coupon.trim()}>Aplicar</button></div></article>
+        <article className="billingCard couponCard">
+          <h2>Ativar cupom de acesso</h2>
+          <p>O cupom libera o Premium para toda a sua organização, sem cadastrar uma forma de pagamento.</p>
+          <ol className="couponSteps" aria-label="Etapas para ativar o cupom">
+            <li><strong>Digite o código</strong><span>Copie exatamente como recebeu. Espaços no início ou no fim serão removidos.</span></li>
+            <li><strong>Confira os dados</strong><span>Mostraremos o benefício e a data final antes da ativação.</span></li>
+            <li><strong>Confirme a ativação</strong><span>O acesso será liberado imediatamente e nenhuma cobrança será criada.</span></li>
+          </ol>
+          <form className="couponForm" onSubmit={validateCoupon}>
+            <label htmlFor="coupon-code">Código do cupom</label>
+            <div className="couponRow"><input id="coupon-code" value={coupon} onChange={(e) => { setCoupon(e.target.value.toUpperCase()); setCouponPreview(null); setError(""); }} maxLength={64} placeholder="Ex.: CORTESIA-2026" autoComplete="off" aria-describedby="coupon-help"/><button type="submit" disabled={busy || !coupon.trim()}>{busy ? "Validando..." : "Validar código"}</button></div>
+            <small id="coupon-help">Se o código não funcionar, confira letras, números e hífens ou solicite um novo código a quem forneceu o cupom.</small>
+          </form>
+          {couponPreview ? <div className="couponPreview" role="status">
+            <div><span>Cupom validado</span><strong>{couponPreview.name || couponPreview.code}</strong></div>
+            <p>Premium disponível até <strong>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date(couponPreview.endsAt))}</strong>.</p>
+            {couponPreview.alreadyRedeemed ? <p>Este cupom já foi vinculado à sua organização. Confirme para atualizar o acesso.</p> : <p>Ao confirmar, o cupom ficará vinculado à sua organização e não poderá ser usado por outra conta da mesma organização.</p>}
+            <button type="button" onClick={applyCoupon} disabled={busy}>{busy ? "Ativando..." : couponPreview.alreadyRedeemed ? "Atualizar acesso" : "Confirmar e ativar Premium"}</button>
+          </div> : null}
+        </article>
         <article className="billingCard checkoutCard"><h2>Assinar Premium</h2><div className="billingMethods">{(["PIX", "BOLETO", "CREDIT_CARD"] as const).map((type) => <button type="button" className={billingType === type ? "selected" : "ghostButton"} onClick={() => setBillingType(type)} key={type}>{type === "CREDIT_CARD" ? "Cartão" : type === "BOLETO" ? "Boleto" : "PIX"}</button>)}</div>
           <form onSubmit={subscribe} autoComplete="off"><div className="billingFields"><label>Nome do titular<input name="name" defaultValue={user.name} required/></label><label>E-mail<input name="email" type="email" defaultValue={user.email} required/></label><label>CPF ou CNPJ<input name="cpfCnpj" inputMode="numeric" required/></label><label>Telefone<input name="phone" inputMode="tel" required/></label></div>
           {billingType === "CREDIT_CARD" ? <div className="cardFields"><label>Nome no cartão<input name="holderName" required autoComplete="off"/></label><label>Número do cartão<input name="number" inputMode="numeric" required autoComplete="off"/></label><label>Mês<input name="expiryMonth" inputMode="numeric" required/></label><label>Ano<input name="expiryYear" inputMode="numeric" required/></label><label>CVV<input name="ccv" type="password" inputMode="numeric" required autoComplete="off"/></label><label>CEP<input name="postalCode" inputMode="numeric" required/></label><label>Número do endereço<input name="addressNumber" required/></label></div> : null}

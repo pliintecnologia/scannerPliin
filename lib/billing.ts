@@ -75,11 +75,11 @@ export async function inspectCoupon(code: string, tenantId: string) {
     [code, tenantId]
   );
   const coupon = result.rows[0];
-  if (!coupon) return { valid: false as const, reason: "not_found", message: "Cupom não encontrado." };
-  if (!coupon.active) return { valid: false as const, reason: "inactive", message: "Cupom inativo." };
+  if (!coupon) return { valid: false as const, reason: "not_found", message: "Cupom não encontrado. Confira se o código foi digitado por completo, incluindo letras, números e hífens." };
+  if (!coupon.active) return { valid: false as const, reason: "inactive", message: "Este cupom está inativo. Solicite um novo código a quem forneceu o cupom." };
   const now = Date.now();
-  if (coupon.starts_at && coupon.starts_at.getTime() > now) return { valid: false as const, reason: "not_started", message: "Cupom ainda não iniciado." };
-  if (coupon.ends_at.getTime() <= now) return { valid: false as const, reason: "expired", message: "Cupom expirado." };
+  if (coupon.starts_at && coupon.starts_at.getTime() > now) return { valid: false as const, reason: "not_started", message: `Este cupom ainda não está disponível. Tente novamente a partir de ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeZone: "America/Sao_Paulo" }).format(coupon.starts_at)}.` };
+  if (coupon.ends_at.getTime() <= now) return { valid: false as const, reason: "expired", message: "Este cupom expirou. Solicite um novo código a quem forneceu o cupom." };
   return {
     valid: true as const,
     couponId: coupon.id,

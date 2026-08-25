@@ -2291,6 +2291,18 @@ html[data-theme="dark"] .authBackLink:hover { border-color: #4fd1a5; color: #64d
 .billingMethods button { box-shadow: none; }
 .billingMethods .selected { background: var(--accent); }
 .couponRow input { flex: 1; }
+.couponCard > p { color: var(--muted); line-height: 1.55; }
+.couponSteps { display: grid; gap: 12px; margin: 20px 0; padding: 0; list-style: none; counter-reset: coupon-step; }
+.couponSteps li { display: grid; grid-template-columns: 30px 1fr; column-gap: 10px; counter-increment: coupon-step; }
+.couponSteps li::before { content: counter(coupon-step); grid-row: span 2; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; color: #087443; background: #e7f8ef; font-size: .78rem; font-weight: 800; }
+.couponSteps span, .couponForm small { color: var(--muted); font-size: .82rem; line-height: 1.45; }
+.couponForm label { display: block; margin-bottom: 7px; font-weight: 700; }
+.couponForm small { display: block; margin-top: 8px; }
+.couponPreview { margin-top: 18px; padding: 18px; border: 1px solid rgba(23,178,106,.35); border-radius: 16px; background: rgba(23,178,106,.07); }
+.couponPreview > div { display: flex; justify-content: space-between; gap: 12px; }
+.couponPreview > div span { color: #087443; font-size: .78rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.couponPreview p { margin: 12px 0; font-size: .9rem; line-height: 1.5; }
+.couponPreview button { width: 100%; }
 .billingFields, .cardFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
 .cardFields { grid-template-columns: repeat(4, minmax(0, 1fr)); padding-top: 16px; border-top: 1px solid var(--line); }
 .cardFields label:first-child, .cardFields label:nth-child(2) { grid-column: span 2; }
@@ -2305,12 +2317,16 @@ html[data-theme="dark"] .authBackLink:hover { border-color: #4fd1a5; color: #64d
 html[data-theme="dark"] .billingCard { color: #f5f7fb; border-color: #26324a; background: #0e172b; }
 html[data-theme="dark"] .billingShell .appHeader nav a { color: #f5f7fb; }
 html[data-theme="dark"] .billingNotice.success { color: #7ce4b7; background: #12372b; }
+html[data-theme="dark"] .couponSteps li::before { color: #7ce4b7; background: #12372b; }
+html[data-theme="dark"] .couponPreview { border-color: rgba(79,209,165,.35); background: rgba(79,209,165,.08); }
+html[data-theme="dark"] .couponPreview > div span { color: #7ce4b7; }
 @media (max-width: 760px) {
   .billingHero { display: grid; }
   .billingGrid, .billingFields, .cardFields { grid-template-columns: 1fr; }
   .billingCard, .checkoutCard, .chargesCard, .billingNotice { grid-column: 1; }
   .cardFields label:first-child, .cardFields label:nth-child(2) { grid-column: auto; }
   .billingMethods { flex-wrap: wrap; }
+.couponRow { align-items: stretch; flex-direction: column; }
 .chargeList > div { grid-template-columns: 1fr 1fr; }
 }
 
