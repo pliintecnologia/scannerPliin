@@ -1,18 +1,32 @@
 import type { BillingType } from "./plans";
 
 export class AsaasApiError extends Error {
-  constructor(public readonly status: number, message = "Falha na comunicação com o Asaas.") {
+  constructor(public readonly status: number, message = "Falha na comunicação com o Asaas.", public readonly code = "provider_error") {
     super(message);
     this.name = "AsaasApiError";
   }
 }
 
+function safeApiError(status: number, payload: unknown) {
+  const record = typeof payload === "object" && payload !== null ? payload as Record<string, unknown> : {};
+  const errors = Array.isArray(record.errors) ? record.errors : [];
+  const first = typeof errors[0] === "object" && errors[0] !== null ? errors[0] as Record<string, unknown> : {};
+  const code = typeof first.code === "string" ? first.code.slice(0, 80) : "provider_error";
+  const messages: Record<string, string> = {
+    invalid_environment: "A chave configurada não pertence ao ambiente selecionado no Asaas. Use uma chave Sandbox ou altere conscientemente para produção.",
+    invalid_access_token: "A chave de API do Asaas é inválida ou foi revogada.",
+    unauthorized: "O Asaas recusou a autenticação da integração. Verifique a chave de API."
+  };
+  const fallback = status === 400
+    ? "O Asaas recusou os dados da cobrança. Confira os dados informados e tente novamente."
+    : "Não foi possível comunicar com o Asaas neste momento.";
+  return new AsaasApiError(status, messages[code] || fallback, code);
+}
+
 function baseUrl() {
   const override = process.env.ASAAS_BASE_URL?.replace(/\/+$/, "");
   if (override) return override;
-  return process.env.ASAAS_ENVIRONMENT === "production"
-    ? "https://api.asaas.com/v3"
-    : "https://api-sandbox.asaas.com/v3";
+  return process.env.ASAAS_ENVIRONMENT === "production" ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3";
 }
 
 async function request<T>(path: string, options: { method?: string; body?: unknown; idempotencyKey?: string } = {}) {
@@ -23,18 +37,15 @@ async function request<T>(path: string, options: { method?: string; body?: unkno
     try {
       const response = await fetch(`${baseUrl()}${path}`, {
         method: options.method ?? "GET",
-        headers: {
-          "Content-Type": "application/json",
-          access_token: apiKey,
-          ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {})
-        },
+        headers: { "Content-Type": "application/json", access_token: apiKey, ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}) },
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
-        signal: AbortSignal.timeout(12_000)
+        signal: AbortSignal.timeout(65_000),
+        cache: "no-store"
       });
       const payload = await response.json().catch(() => null) as T | null;
       if (response.ok) return payload as T;
       const retryable = response.status === 429 || response.status >= 500;
-      lastError = new AsaasApiError(response.status);
+      lastError = safeApiError(response.status, payload);
       if (!retryable || attempt === 2) throw lastError;
     } catch (error) {
       lastError = error;
@@ -54,14 +65,8 @@ export function createAsaasCustomer(input: CustomerInput, idempotencyKey: string
   return request<{ id: string }>("/customers", { method: "POST", body: input, idempotencyKey });
 }
 
-export function createAsaasSubscription(input: {
-  customer: string; billingType: BillingType; value: number; nextDueDate: string;
-  cycle: "MONTHLY"; description: string; externalReference: string;
-  creditCard?: CardInput; creditCardHolderInfo?: HolderInput; remoteIp?: string;
-}, idempotencyKey: string) {
-  return request<{ id: string; status?: string } & Record<string, unknown>>("/subscriptions", {
-    method: "POST", body: input, idempotencyKey
-  });
+export function createAsaasSubscription(input: { customer: string; billingType: BillingType; value: number; nextDueDate: string; cycle: "MONTHLY"; description: string; externalReference: string; creditCard?: CardInput; creditCardHolderInfo?: HolderInput; remoteIp?: string }, idempotencyKey: string) {
+  return request<{ id: string; status?: string } & Record<string, unknown>>("/subscriptions", { method: "POST", body: input, idempotencyKey });
 }
 
 export function listSubscriptionPayments(subscriptionId: string) {
@@ -74,5 +79,11 @@ export function cancelSubscription(subscriptionId: string) {
 
 export function sanitizeRemote(value: Record<string, unknown>) {
   const allowed = ["id", "status", "billingType", "cycle", "value", "nextDueDate", "dateCreated", "subscription"];
-  return Object.fromEntries(allowed.filter((key) => value[key] !== undefined).map((key) => [key, value[key]]));
+  const sanitized: Record<string, string | number | boolean | null> = {};
+  for (const key of allowed) {
+    const item = value[key];
+    if (typeof item === "string") sanitized[key] = item.slice(0, 160);
+    else if (typeof item === "number" || typeof item === "boolean" || item === null) sanitized[key] = item;
+  }
+  return sanitized;
 }

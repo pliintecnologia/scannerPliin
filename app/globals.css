@@ -2274,28 +2274,49 @@ html[data-theme="dark"] .authBackLink:hover { border-color: #4fd1a5; color: #64d
 .billingShell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 64px; }
 .billingShell .appHeader nav { display: flex; align-items: center; gap: 16px; }
 .billingShell .appHeader nav a { color: var(--text); font-weight: 600; text-decoration: none; }
-.billingHero { display: flex; align-items: center; justify-content: space-between; gap: 28px; margin: 18px 0 24px; padding: clamp(28px, 5vw, 56px); border-radius: 30px; color: #fff; background: linear-gradient(135deg, #08152d, #0b6b57); box-shadow: var(--shadow-strong); }
-.billingHero h1 { margin: 0; font-size: clamp(2.6rem, 6vw, 5rem); }
-.billingHero p { color: #d9f5e9; }
-.billingPrice { display: flex; align-items: baseline; white-space: nowrap; }
-.billingPrice strong { font-size: clamp(2.5rem, 6vw, 4.5rem); }
-.billingPrice span { color: #d9f5e9; }
 .billingGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .billingCard { padding: 26px; border: 1px solid var(--line); border-radius: 24px; background: var(--panel); box-shadow: var(--shadow); }
 .billingCard h2 { margin-top: 0; }
 .statusCard { display: grid; align-content: start; gap: 12px; }
 .statusCard > strong { color: var(--accent); font-size: 1.2rem; }
+.usageCard { position: relative; overflow: hidden; background: linear-gradient(145deg, color-mix(in srgb, var(--panel) 94%, var(--accent)), var(--panel)); }
+.usageCard::after { position: absolute; width: 150px; height: 150px; right: -80px; top: -80px; border: 28px solid color-mix(in srgb, var(--accent) 9%, transparent); border-radius: 50%; content: ""; pointer-events: none; }
+.usageHead { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.usageHead > div { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 9px; }
+.usageHead span { grid-column: 1 / -1; margin-bottom: 8px; color: var(--muted); font-size: .76rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.usageHead strong { color: var(--text); font-size: clamp(2.6rem, 6vw, 4rem); line-height: .95; letter-spacing: -.05em; }
+.usageHead small { max-width: 12ch; color: var(--muted); line-height: 1.25; }
+.usageHead > b { padding: 7px 10px; border-radius: 999px; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); font-size: .75rem; white-space: nowrap; }
+.usageTrack { height: 9px; margin-top: 24px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--muted) 18%, transparent); }
+.usageTrack i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #25c98a); transition: width .35s ease; }
+.usageCard > p { margin: 12px 0 0; color: var(--muted); font-size: .78rem; }
 .checkoutCard, .chargesCard, .billingNotice { grid-column: 1 / -1; }
+.checkoutCard { border-color: color-mix(in srgb, var(--accent) 18%, var(--line)); border-radius: 18px; box-shadow: 0 18px 55px rgba(8, 31, 49, .08); }
+.planSummary { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+.planSummary span { color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.planSummary h1 { margin: 4px 0 0; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1; }
+.planSummary h1 small { color: var(--muted); font-size: 1rem; font-weight: 600; }
+.planSummary p { max-width: 28ch; margin: 0; color: var(--muted); line-height: 1.5; text-align: right; }
+.billingChoices { display: grid; gap: 12px; margin-top: 20px; }
+.billingChoice { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; }
+.billingChoice.open { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.billingChoiceTrigger { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 78px; padding: 17px 20px; border: 0; border-radius: 0; color: var(--text); background: transparent; box-shadow: none; text-align: left; }
+.billingChoiceTrigger span { display: grid; gap: 4px; }
+.billingChoiceTrigger strong { font-size: 1rem; }
+.billingChoiceTrigger small { color: var(--muted); font-weight: 500; line-height: 1.4; }
+.billingChoiceTrigger b { color: var(--accent); font-size: 1.45rem; }
+.billingChoiceContent { padding: 22px 20px 24px; border-top: 1px solid var(--line); }
+.billingChoiceContent[hidden] { display: none; }
+.billingChoiceContent > h2 { margin-bottom: 14px; font-size: 1rem; }
 .billingMethods, .couponRow, .panelHead { display: flex; align-items: center; gap: 10px; }
-.billingMethods { margin-bottom: 22px; }
-.billingMethods button { box-shadow: none; }
+.billingMethods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 26px; align-items: stretch; }
+.billingMethods button { width: 100%; min-height: 88px; display: flex; align-items: flex-start; justify-content: center; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 12px; box-shadow: none; text-align: left; }
+.billingMethods button small { color: inherit; font-size: .72rem; font-weight: 500; line-height: 1.35; opacity: .8; }
 .billingMethods .selected { background: var(--accent); }
+.billingCustomerIntro { margin: 0 0 18px; padding-top: 2px; }
+.billingCustomerIntro strong { display: block; margin-bottom: 4px; font-size: .92rem; }
+.billingCustomerIntro p { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
 .couponRow input { flex: 1; }
-.couponCard > p { color: var(--muted); line-height: 1.55; }
-.couponSteps { display: grid; gap: 12px; margin: 20px 0; padding: 0; list-style: none; counter-reset: coupon-step; }
-.couponSteps li { display: grid; grid-template-columns: 30px 1fr; column-gap: 10px; counter-increment: coupon-step; }
-.couponSteps li::before { content: counter(coupon-step); grid-row: span 2; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; color: #087443; background: #e7f8ef; font-size: .78rem; font-weight: 800; }
-.couponSteps span, .couponForm small { color: var(--muted); font-size: .82rem; line-height: 1.45; }
 .couponForm label { display: block; margin-bottom: 7px; font-weight: 700; }
 .couponForm small { display: block; margin-top: 8px; }
 .couponPreview { margin-top: 18px; padding: 18px; border: 1px solid rgba(23,178,106,.35); border-radius: 16px; background: rgba(23,178,106,.07); }
@@ -2304,30 +2325,54 @@ html[data-theme="dark"] .authBackLink:hover { border-color: #4fd1a5; color: #64d
 .couponPreview p { margin: 12px 0; font-size: .9rem; line-height: 1.5; }
 .couponPreview button { width: 100%; }
 .billingFields, .cardFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+.billingFields label, .cardFields label { align-content: start; color: var(--muted); }
+.billingFields input, .cardFields input, .couponForm input { min-height: 48px; border-radius: 10px; color: var(--text); }
 .cardFields { grid-template-columns: repeat(4, minmax(0, 1fr)); padding-top: 16px; border-top: 1px solid var(--line); }
 .cardFields label:first-child, .cardFields label:nth-child(2) { grid-column: span 2; }
-.checkoutCard form > button { width: 100%; margin: 6px 0 12px; }
+.checkoutCard form > button { width: 100%; min-height: 50px; margin: 6px 0 12px; border-radius: 11px; }
 .checkoutCard small { color: var(--muted); }
 .billingNotice { margin: 0; padding: 16px 20px; border-radius: 14px; }
 .billingNotice.success { color: #087443; background: #e7f8ef; }
+.billingNotice.info { color: #31557a; background: #eaf3fb; }
 .chargeList { display: grid; gap: 8px; }
 .chargeList > div { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 14px; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--line); }
 .chargeList a { color: var(--accent); font-weight: 700; }
+.chargePreview { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)) auto; gap: 18px; align-items: center; margin-top: 8px; padding: 17px 18px; border: 1px dashed color-mix(in srgb, var(--accent) 42%, var(--line)); border-radius: 12px; background: color-mix(in srgb, var(--accent) 4%, var(--panel)); }
+.chargePreview > div { display: grid; gap: 4px; }
+.chargePreview small { color: var(--muted); font-size: .7rem; }
+.chargePreview strong { font-size: .88rem; }
+.chargeSpinner { width: 20px; height: 20px; border: 2px solid color-mix(in srgb, var(--accent) 20%, transparent); border-top-color: var(--accent); border-radius: 50%; animation: chargeSpin .8s linear infinite; }
+.chargePendingBadge { padding: 7px 10px; border-radius: 8px; color: #087443; background: #dcf7ea; font-size: .72rem; font-weight: 800; white-space: nowrap; }
+.chargeStateError { margin-top: 8px; padding: 17px 18px; border: 1px solid #efb8b8; border-radius: 12px; color: #8f2525; background: #fff2f2; }
+.chargeStateError p { margin: 5px 0 13px; line-height: 1.45; }
+.chargeStateError button { min-height: 40px; padding-block: 8px; border-radius: 9px; }
+.emptyCharges { margin-bottom: 0; color: var(--muted); }
+@keyframes chargeSpin { to { transform: rotate(360deg); } }
 .chargesCard .panelHead { justify-content: space-between; }
+.panelActions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 html[data-theme="dark"] .billingCard { color: #f5f7fb; border-color: #26324a; background: #0e172b; }
 html[data-theme="dark"] .billingShell .appHeader nav a { color: #f5f7fb; }
 html[data-theme="dark"] .billingNotice.success { color: #7ce4b7; background: #12372b; }
-html[data-theme="dark"] .couponSteps li::before { color: #7ce4b7; background: #12372b; }
 html[data-theme="dark"] .couponPreview { border-color: rgba(79,209,165,.35); background: rgba(79,209,165,.08); }
 html[data-theme="dark"] .couponPreview > div span { color: #7ce4b7; }
 @media (max-width: 760px) {
-  .billingHero { display: grid; }
   .billingGrid, .billingFields, .cardFields { grid-template-columns: 1fr; }
   .billingCard, .checkoutCard, .chargesCard, .billingNotice { grid-column: 1; }
+  .billingCard { padding: 19px; border-radius: 16px; }
   .cardFields label:first-child, .cardFields label:nth-child(2) { grid-column: auto; }
-  .billingMethods { flex-wrap: wrap; }
-.couponRow { align-items: stretch; flex-direction: column; }
-.chargeList > div { grid-template-columns: 1fr 1fr; }
+  .planSummary { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .planSummary p { text-align: left; }
+  .billingChoiceTrigger, .billingChoiceContent { padding: 16px; }
+  .billingMethods { grid-template-columns: 1fr; gap: 9px; }
+  .billingMethods button { min-height: 72px; }
+  .couponRow { align-items: stretch; flex-direction: column; }
+  .chargeList > div { grid-template-columns: 1fr 1fr; }
+  .chargePreview { grid-template-columns: auto 1fr 1fr; gap: 13px; }
+  .chargePreview > div:nth-of-type(3) { grid-column: 2 / -1; }
+  .chargePendingBadge { grid-column: 2 / -1; width: fit-content; }
+  .chargesCard .panelHead { align-items: flex-start; flex-direction: column; }
+  .panelActions { width: 100%; align-items: stretch; flex-direction: column; }
+  .usageHead strong { font-size: 3rem; }
 }
 
 /* Landing comercial */
@@ -2835,37 +2880,4 @@ html[data-theme="dark"] .landingPage { background: #fbfcfa; color: #0a1830; }
   .previewIssue strong { display: none; }
   .landingSection { width: calc(100% - 32px); padding-top: 62px; }
   .capabilityGrid { grid-template-columns: 1fr; }
-}
-
-/* Hero em largura total, com conteúdo fluido e responsivo */
-.landingHero {
-  width: 100%;
-  max-width: none;
-  margin-inline: 0;
-  border-radius: 0;
-  padding-inline: max(40px, calc((100vw - 1280px) / 2));
-}
-
-@media (min-width: 1600px) {
-  .landingHero {
-    grid-template-columns: minmax(470px, .82fr) minmax(650px, 1.18fr);
-    gap: clamp(70px, 6vw, 120px);
-    padding-inline: max(64px, calc((100vw - 1440px) / 2));
-  }
-}
-
-@media (max-width: 1100px) {
-  .landingHero { padding-inline: 44px; }
-}
-
-@media (max-width: 920px) {
-  .landingHero { padding-inline: clamp(28px, 6vw, 56px); }
-}
-
-@media (max-width: 620px) {
-  .landingHero {
-    width: 100%;
-    padding-inline: 20px;
-    border-radius: 0;
-  }
 }

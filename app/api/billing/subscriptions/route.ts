@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { isIP } from "node:net";
 import { NextResponse } from "next/server";
-import { createAsaasCustomer, createAsaasSubscription, sanitizeRemote, type CardInput, type HolderInput } from "../../../../lib/asaas";
+import { AsaasApiError, createAsaasCustomer, createAsaasSubscription, sanitizeRemote, type CardInput, type HolderInput } from "../../../../lib/asaas";
 import { getCurrentUser } from "../../../../lib/auth";
 import { canManageBilling, getEffectiveAccess, hashBillingDocument } from "../../../../lib/billing";
 import { query, transaction } from "../../../../lib/db";
@@ -15,14 +16,38 @@ type SubscriptionBody = {
   creditCardHolderInfo?: Record<string, unknown>;
 };
 
-function dueTomorrow() {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() + 1);
-  return date.toISOString().slice(0, 10);
+export const runtime = "nodejs";
+export const maxDuration = 75;
+
+function dueToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
 }
 
 function digitsField(value: unknown, max: number) {
   return onlyDigits(value).slice(0, max);
+}
+
+function validCardNumber(value: string) {
+  if (!/^\d{13,19}$/.test(value)) return false;
+  let sum = 0;
+  let double = false;
+  for (let index = value.length - 1; index >= 0; index -= 1) {
+    let digit = Number(value[index]);
+    if (double) { digit *= 2; if (digit > 9) digit -= 9; }
+    sum += digit;
+    double = !double;
+  }
+  return sum % 10 === 0;
+}
+
+function clientIp(request: Request) {
+  const candidates = [request.headers.get("cf-connecting-ip"), request.headers.get("x-real-ip"), request.headers.get("x-forwarded-for")?.split(",")[0]];
+  return candidates.map((value) => value?.trim()).find((value) => value && isIP(value)) || "";
 }
 
 export async function POST(request: Request) {
@@ -34,7 +59,7 @@ export async function POST(request: Request) {
   const access = await getEffectiveAccess(user.tenantId);
   if (access.source === "coupon") return NextResponse.json({ access, charged: false, message: "Cupom vigente; nenhuma cobrança foi criada." });
 
-  const body = await request.json().catch(() => null) as SubscriptionBody | null;
+  let body = await request.json().catch(() => null) as SubscriptionBody | null;
   const billingType = body?.billingType;
   if (billingType !== "CREDIT_CARD" && billingType !== "PIX" && billingType !== "BOLETO") {
     return NextResponse.json({ error: "Meio de pagamento inválido." }, { status: 400 });
@@ -68,11 +93,16 @@ export async function POST(request: Request) {
       phone: digitsField(rawHolder.phone, 15)
     };
     const month = Number(card.expiryMonth);
+    if (!validCardNumber(card.number)) card.number = "";
     if (card.holderName.length < 2 || card.number.length < 13 || card.number.length > 19 || month < 1 || month > 12 || !/^\d{4}$/.test(card.expiryYear) || card.ccv.length < 3 || holder.name.length < 2 || !validEmail(holder.email) || (!validCpf(holder.cpfCnpj) && !validCnpj(holder.cpfCnpj)) || holder.postalCode.length !== 8 || !holder.addressNumber || holder.phone.length < 8) {
       return NextResponse.json({ error: "Dados do cartão ou endereço inválidos." }, { status: 400 });
     }
   }
 
+  if (body) {
+    body.creditCard = undefined;
+    body.creditCardHolderInfo = undefined;
+  }
   const suppliedKey = request.headers.get("idempotency-key")?.trim();
   const idempotencyKey = suppliedKey && /^[A-Za-z0-9:_-]{8,128}$/.test(suppliedKey) ? suppliedKey : randomUUID();
   const existing = await query<{ id: string; status: string }>(
@@ -87,7 +117,7 @@ export async function POST(request: Request) {
   );
   if (current.rows[0]) return NextResponse.json({ error: "Já existe uma assinatura ativa ou pendente para esta conta." }, { status: 409 });
 
-  const nextDueDate = dueTomorrow();
+  const nextDueDate = dueToday();
   const description = `${process.env.BILLING_COMPANY_NAME || "Scanner Pliin"} - Plano Premium`;
   const reserved = await query<{ id: string }>(
     `INSERT INTO asaas_subscriptions
@@ -117,7 +147,8 @@ export async function POST(request: Request) {
       );
     }
     const customer = localCustomer.rows[0];
-    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    const remoteIp = clientIp(request);
+    if (billingType === "CREDIT_CARD" && !remoteIp) throw new Error("missing_client_ip");
     const remote = await createAsaasSubscription({
       customer: customer.asaas_customer_id,
       billingType: billingType as BillingType,
@@ -128,7 +159,7 @@ export async function POST(request: Request) {
       externalReference: idempotencyKey,
       creditCard: card,
       creditCardHolderInfo: holder,
-      remoteIp: billingType === "CREDIT_CARD" ? forwarded || "127.0.0.1" : undefined
+      remoteIp: billingType === "CREDIT_CARD" ? remoteIp : undefined
     }, idempotencyKey);
     const saved = await transaction(async (client) => {
       const result = await client.query<{ id: string; status: string }>(
@@ -141,11 +172,16 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ subscription: saved, accessPending: true }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Falha ao iniciar assinatura.";
+    const providerCode = error instanceof AsaasApiError ? error.code : "provider_request_failed";
+    const safeMessage = error instanceof AsaasApiError ? error.message : "Não foi possível iniciar a assinatura no Asaas.";
     await query(
       "UPDATE asaas_subscriptions SET status = 'FAILED', error_message = $1, updated_at = NOW() WHERE id = $2",
-      [message.slice(0, 500), reserved.rows[0].id]
+      [`provider_${providerCode}`.slice(0, 500), reserved.rows[0].id]
     );
-    return NextResponse.json({ error: "Não foi possível iniciar a assinatura no Asaas." }, { status: 502 });
+    return NextResponse.json({ error: safeMessage }, { status: 502 });
+  } finally {
+    card = undefined;
+    holder = undefined;
+    body = null;
   }
 }

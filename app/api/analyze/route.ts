@@ -5,6 +5,8 @@ import { tenantQuery } from "../../../lib/db";
 import { assertPublicUrl } from "../../../lib/public-url";
 import { bodyTooLarge, rejectCrossOrigin } from "../../../lib/request-security";
 import { getEffectiveAccess } from "../../../lib/billing";
+import { PREMIUM_PLAN } from "../../../lib/plans";
+import { getMonthlyAuditUsage } from "../../../lib/usage";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -42,6 +44,10 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sessão expirada. Entre novamente." }, { status: 401 });
   if (!(await getEffectiveAccess(user.tenantId)).allowed) return NextResponse.json({ error: "Assinatura necessária." }, { status: 402 });
+  const monthlyUsage = await getMonthlyAuditUsage(user.tenantId);
+  if (monthlyUsage.remaining === 0) {
+    return NextResponse.json({ error: `Você atingiu o limite de ${PREMIUM_PLAN.monthlyAuditLimit} pesquisas deste mês. O limite será renovado no início do próximo mês.` }, { status: 429 });
+  }
   const body = await request.json().catch(() => null) as {
     html?: string;
     url?: string;

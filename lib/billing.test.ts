@@ -57,8 +57,15 @@ describe("cliente Asaas", () => {
   });
 
   it("não preserva campos sensíveis em respostas remotas", () => {
-    const clean = sanitizeRemote({ id: "sub", status: "ACTIVE", creditCard: { number: "4111" }, ccv: "123", apiKey: "secret" });
+    const clean = sanitizeRemote({ id: "sub", status: "ACTIVE", creditCard: { number: "4111" }, subscription: { creditCard: { number: "5555" }, ccv: "999" }, ccv: "123", apiKey: "secret" });
     expect(clean).toEqual({ id: "sub", status: "ACTIVE" });
-    expect(JSON.stringify(clean)).not.toMatch(/4111|123|secret/);
+    expect(JSON.stringify(clean)).not.toMatch(/4111|5555|999|123|secret/);
+  });
+
+  it("classifica com segurança chave incompatível com o ambiente", async () => {
+    process.env.ASAAS_API_KEY = "test-key";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ errors: [{ code: "invalid_environment", description: "detalhe externo" }] }), { status: 401, headers: { "Content-Type": "application/json" } })));
+    await expect(createAsaasSubscription({ customer: "cus_1", billingType: "PIX", value: 50, nextDueDate: "2026-08-25", cycle: "MONTHLY", description: "Plano", externalReference: "request-123" }, "request-123"))
+      .rejects.toMatchObject({ code: "invalid_environment", status: 401 });
   });
 });
