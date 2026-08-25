@@ -10,7 +10,9 @@ function user(role: AuthUser["role"]): AuthUser {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   delete process.env.ASAAS_API_KEY;
+  delete process.env.ASAAS_ENVIRONMENT;
   delete process.env.AUTH_SECRET;
 });
 
@@ -41,6 +43,20 @@ describe("permissões e cupons", () => {
 });
 
 describe("cliente Asaas", () => {
+  it("registra diagnóstico sem chave, corpo ou identificadores", async () => {
+    process.env.ASAAS_API_KEY = "secret-api-key";
+    process.env.ASAAS_ENVIRONMENT = "production";
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "sub_sensitive" }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    await createAsaasSubscription({ customer: "cus_sensitive", billingType: "PIX", value: 50, nextDueDate: "2026-08-25", cycle: "MONTHLY", description: "Sensitive description", externalReference: "external-sensitive" }, "idempotency-sensitive");
+
+    const serialized = JSON.stringify(log.mock.calls);
+    expect(serialized).toContain("create_subscription");
+    expect(serialized).toContain("production");
+    expect(serialized).not.toMatch(/secret-api-key|sub_sensitive|cus_sensitive|Sensitive description|external-sensitive|idempotency-sensitive/);
+  });
+
   it("envia access_token, idempotência e exatamente R$ 50,00", async () => {
     process.env.ASAAS_API_KEY = "sandbox-key";
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "sub_1", status: "ACTIVE" }), { status: 200, headers: { "Content-Type": "application/json" } }));
