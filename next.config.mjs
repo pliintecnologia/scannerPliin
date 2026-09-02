@@ -4,6 +4,16 @@ const nextConfig = {
   poweredByHeader: false,
   async headers() {
     return [{
+      // The landing page is prerendered, but its HTML references build-scoped
+      // assets under /_next/static. Do not let a reverse proxy keep that HTML
+      // across deployments, otherwise it can point to CSS/JS that no longer
+      // exists in the new container.
+      source: "/",
+      headers: [
+        { key: "Cache-Control", value: "no-store, max-age=0, must-revalidate" },
+        { key: "Pragma", value: "no-cache" }
+      ]
+    }, {
       source: "/(.*)",
       headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },
