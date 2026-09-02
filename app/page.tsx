@@ -2,6 +2,11 @@ import Link from "next/link";
 import { ArrowDownToLine, ArrowRight, BarChart3, Check, FileText, Gauge, Menu, Play, ShieldCheck, Zap } from "lucide-react";
 import { BrandLogo } from "./brand-logo";
 
+// This page references build-scoped /_next assets. Rendering it dynamically
+// prevents a reverse proxy from retaining prerendered HTML after a deployment
+// has replaced those hashed CSS and JavaScript files.
+export const dynamic = "force-dynamic";
+
 const capabilities = [
   { icon: Zap, title: "Análise automatizada", text: "Escaneamento completo do seu site com tecnologia avançada e precisa." },
   { icon: BarChart3, title: "Relatórios inteligentes", text: "Relatórios claros e acionáveis com priorização por impacto." },
