@@ -1,5 +1,8 @@
 x-app-image: &app-image
   image: ${APP_IMAGE:-scannerpliin-app}
+  # Rebuild the application whenever Compose deploys the stack. This avoids
+  # reusing an image whose HTML still references assets from an older build.
+  pull_policy: build
   build:
     context: .
 
