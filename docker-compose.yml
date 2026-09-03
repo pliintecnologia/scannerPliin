@@ -1,8 +1,8 @@
 x-app-image: &app-image
   image: ${APP_IMAGE:-scannerpliin-app}
-  # Rebuild the application whenever Compose deploys the stack. This avoids
-  # reusing an image whose HTML still references assets from an older build.
-  pull_policy: build
+  # Production sets this to "always" for its commit-specific GHCR image;
+  # local Compose can still reuse/build the default development image.
+  pull_policy: ${APP_PULL_POLICY:-missing}
   build:
     context: .
 
